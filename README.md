@@ -1,4 +1,4 @@
-asdfThe Coke Project
+The Coke Project
 ================
 
 Installation

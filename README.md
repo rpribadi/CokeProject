@@ -6,6 +6,12 @@ Installation
 To run app:
 <code>node server.js</code>
 
+Then open web browser and type:
+<code>http://localhost:5555/</code>
+or
+<code>http://localhost:5555/daily.html</code>
+
+
 Working Progress
 ----------------
 Last update:

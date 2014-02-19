@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <title>WebGL Globe</title>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="/coke50/style.css"/>
+
+
+</head>
+<body>
+
+<div id="container"></div>
+<!--
+<div id="info">
+  The <a href="http://www.chromeexperiments.com/globe">WebGL Globe</a> is an
+  open platform for visualizing geographic data. <span
+    class="bull">&bull;</span> <a href="https://github.com/dataarts/webgl-globe">Get
+  the code</a> <span class="bull">&bull;</span> By the Google Data Arts Team</a>
+</div>
+-->
+<div id="title">
+  Coca-cola Freestyle
+</div>
+<div id="slider">
+  <span style="top:0;position:absolute"></span>
+</div>  
+
+<a id="ce" href="http://www.chromeexperiments.com/globe">
+  <span>Senseable City Lab</span>
+</a>
+<script type="text/javascript" src="/coke50/third-party/Detector.js"></script>
+<script type="text/javascript" src="/coke50/third-party/three.min.js"></script>
+<script type="text/javascript" src="/coke50/third-party/Tween.js"></script>
+<script type="text/javascript" src="/coke50/js/daily.js"></script>
+<script type="text/javascript" src="/coke50/js/camera.js"></script>
+<script type="text/javascript" src="/coke50/js/draw.js"></script>
+<script src="http://d3js.org/d3.v2.min.js?2.8.1"></script>
+<script type="text/javascript" src="/coke50/js/mouse.js"></script>
+<script src="http://code.jquery.com/jquery-1.9.1.js"></script>
+<script type="text/javascript">
+
+  var container = document.getElementById('container');
+  var globe = new DAT.Globe(container);
+
+
+  var days = null;
+  var tweens = []; cam_tweens = [];
+  var each_day_max = [];
+  var test = 10; // IMPORTAMT!! Here set the number of days to animate (there are 335 days in total, takes 0.2 seconds to load 1 day)
+  var frame_speed = 2000; // IMPORTAMT!! Change the speed of the animation
+  var start_delay = 2000;
+  var sli_width = 1100; //
+  var margin = {top: 20, right: 50, bottom: 20, left: 50},
+      width = sli_width + margin.left + margin.right,
+      height = 100 + margin.top + margin.bottom;
+  var format_date = d3.time.format("%Y.%m.%d");
+
+  var svg = d3.select("#slider").append("svg")
+      .attr("width", width)
+      .attr("height", height)
+    .append("g")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+
+
+  var settime = function(globe,pointer,t) {  //Here generate the animation chain
+    
+      //animate globe with bars based on consumption (function defined in daily.js line 463)
+      var tween = new TWEEN.Tween(globe).to({time: t/test},frame_speed).easing(TWEEN.Easing.Cubic.EaseOut);
+      tweens.push(tween);
+
+      //animate camera
+      var cam_tween = new TWEEN.Tween(this).to({distanceTarget : cam_scale(each_day_max[t])},frame_speed).easing(TWEEN.Easing.Cubic.EaseOut);
+      cam_tweens.push(cam_tween);
+
+      //Can I merge two tween with diiferent targets?  
+      if(t==0){
+        tween.delay(start_delay).start();
+        cam_tween.delay(start_delay).start();
+        
+      } else {
+        tweens[t-1].chain(tween);
+        cam_tweens[t-1].chain(cam_tween);
+      }
+    
+  };
+
+  var draw_slider = function(x){ // draw the time slider
+    
+    var x = x;
+    var top = 40;
+    var format = d3.time.format("%b");
+
+    var xAxis = d3.svg.axis()
+      .scale(x)
+      .tickFormat(function(d){return format(d);})
+      .tickPadding(10)
+      .orient("bottom");
+
+    svg.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + top + ")")
+      .call(xAxis);
+
+    var dot = svg.append("circle")
+    .attr("cy", top)
+    .attr("cx", 0)
+    .attr("r", 7)
+    .attr("id","dot")
+    .style("fill", "#ff0000")
+    .style("stroke","ff9200")
+    .style("stroke-width","2");
+
+    var date = svg.append("text")
+    .attr("transform", "translate(0," + margin.top + ")")
+    .attr("id","date")
+    .style("fill","#ffffff")
+    .style("text-anchor","middle")
+    .text("");
+}
+
+
+$(window).ready(function(){
+ d3.csv("/coke50/data/Daily.csv", function(raw_data){
+
+    var key = Object.keys(raw_data[0]);
+    days = key.length - 3;    
+    console.log(days + " days per machine");
+    
+    
+    var minimum = key.slice(0,key.length-3).map(function(k){ return d3.min(raw_data, function(d){ return parseFloat(d[k]);}); });      
+    var maximum = key.slice(0,key.length-3).map(function(k){ return d3.max(raw_data, function(d){ return parseFloat(d[k]);}); });
+
+    MIN = d3.min(minimum);
+    MAX = d3.max(maximum);
+    
+    var count = 0;
+    
+    for (var i = 0; i < test; i++ ){
+      var each_day = [];
+      
+      raw_data.forEach(function(d){
+        each_day.push({id:d.machineId, lat:d.lat, lng:d.lng, total:parseFloat(d[i+1])});
+      });
+      console.log("data ready!");
+      each_day_max.push( d3.max(each_day, function(d){ return d.total; }));
+      
+      globe.addData(each_day, {format: 'magnitude', name: "day"+(i+1), animated: true});
+      count++;
+      console.log(count + " days added!");
+    
+    }
+    
+    globe.createPoints();
+    //console.log(each_day_max);
+    MIN_d = d3.min(each_day_max);
+    MAX_d = d3.max(each_day_max);
+
+    cam_scale = d3.scale.linear()
+              .domain([MIN_d, MAX_d])
+              .range([c_close, c_far]);
+    
+    d_scale = d3.time.scale()
+              .domain([0, days])
+              .range([new Date("Jan 01 2013 00:00:00 GMT-0500 (EST)"), new Date("Dec 01 2013 00:00:00 GMT-0500 (EST)")]);
+
+   
+    x_scale = d3.time.scale()
+              .domain([new Date("Jan 01 2013 00:00:00 GMT-0500 (EST)"), new Date("Dec 01 2013 00:00:00 GMT-0500 (EST)")])
+              .range([0,sli_width]);
+    
+    draw_slider(x_scale);
+    pointer = document.getElementById("dot");
+
+    //animate_slider();
+    for (var t = 0; t < test; t++) {
+        settime(globe,pointer,t);             
+    }
+    TWEEN.start();
+    
+    //var top50 = data[1].slice(0,50);
+    
+    //globe.addData(data[0], {format: 'legend', name:'dot'});
+    
+    //globe.createPoints();
+    
+    //globe.addData(top50, {format: 'legend', name:'machine50'});
+    
+    //globe.createPoints();
+
+    //globe.addData(data[1], {format: 'legend', name:'machine'});
+    
+    //globe.createPoints();
+    //globe.addData(data[2], {format: 'legend', name:'machine_all', animated: false});
+    
+    //globe.createPoints();
+    globe.animate();
+
+    document.body.style.backgroundImage = 'none'; // remove loading
+    console.log("image deleted");
+
+  });
+
+
+//setInterval(saveFrame,500);
+
+});
+
+
+
+
+</script>
+
+
+</body>
+
+</html>

@@ -454,9 +454,11 @@ DAT.Globe = function(container, colorFn) {
 
   init();
   this.animate = animate;
+  this.render = render;
 
 
-  this.__defineGetter__('time', function() {
+
+    this.__defineGetter__('time', function() {
     return this._time || 0;
   });
 

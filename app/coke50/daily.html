@@ -37,6 +37,8 @@
 <script src="http://d3js.org/d3.v2.min.js?2.8.1"></script>
 <script type="text/javascript" src="/coke50/js/mouse.js"></script>
 <script src="http://code.jquery.com/jquery-1.9.1.js"></script>
+<script type="text/javascript" src="/coke50/js/libs/jquery-deparam.js"></script>
+
 <script type="text/javascript">
 
   var container = document.getElementById('container');
@@ -138,11 +140,13 @@ $(window).ready(function(){
     
     for (var i = 0; i < test; i++ ){
       var each_day = [];
-      
+
+
       raw_data.forEach(function(d){
         each_day.push({id:d.machineId, lat:d.lat, lng:d.lng, total:parseFloat(d[i+1])});
       });
-      console.log("data ready!");
+
+      console.log("data ready!", raw_data.length);
       each_day_max.push( d3.max(each_day, function(d){ return d.total; }));
       
       globe.addData(each_day, {format: 'magnitude', name: "day"+(i+1), animated: true});
@@ -194,10 +198,33 @@ $(window).ready(function(){
     //globe.addData(data[2], {format: 'legend', name:'machine_all', animated: false});
     
     //globe.createPoints();
-    globe.animate();
+
+     var params = $.deparam(window.location.search.substring(1));
+     console.log(params)
+     if(params.record === true || params.record === "true") {
+         var exportFrame = function(packet) {
+             console.log("SAVING", packet.frame)
+             $.post( "/export.html", packet)
+                     .done(function(response) {
+                         console.log( "Data Loaded", response.frame);
+                     }, "json");
+         };
+
+         var i = 1;
+         globe.customAnimate = function() {
+             requestAnimationFrame(globe.customAnimate);
+             globe.render();
+             exportFrame({data: document.querySelector('#canvas').toDataURL("image/png"), frame: i});
+             i += 1;
+         };
+
+         globe.customAnimate();
+     }
+     else {
+         globe.animate();
+     }
 
     document.body.style.backgroundImage = 'none'; // remove loading
-    console.log("image deleted");
 
   });
 

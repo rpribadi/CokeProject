@@ -145,7 +145,7 @@ $(window).ready(function(){
    d3.csv("/coke50/data/machines.csv", function(machine_data){
         d3.csv("/coke50/data/pop_dots.csv", function(pop_data){
            d3.csv("/coke50/data/machine_all.csv", function(machine_all_data){
-              var data = [pop_data,machine_data,machine_all_data];
+              var data = [pop_data, machine_data, machine_all_data];
               var top50 = data[1].slice(0,50);
               
               //globe.addData(data[0], {format: 'legend', name:'dot'});

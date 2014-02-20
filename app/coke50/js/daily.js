@@ -13,8 +13,10 @@
 
 var DAT = DAT || {};
 var camera = null;
+var composer, effectFocus;
 var rotation = null; 
 var target = { x: 3.0023889803846893, y: 0.7635987755982989 };
+var R = 200;
 //var distanceTarget = 100000;
 
 //var target_1 = {x: 2.964955396106033, y: 0.7201028706105379};
@@ -44,9 +46,15 @@ zoom_to_top10 = function(duration){
 
   var p1 = duration/Math.abs(trajectory[0].dist - distanceTarget) * 5
   camera_move(trajectory[0].targ,trajectory[0].dist,-5,p1);
+
+  //remove camera tween:
+  var t = parseInt(globe.time * test); // get current globe time;
+  cam_tweens[t+1].stop();
+
+  console.log(cam_tweens);
   //event.preventDefault();
 
-  var tween = new TWEEN.Tween(globe.points.material).to({opacity: 0.4},duration).easing(TWEEN.Easing.Cubic.EaseOut).start();
+  var tween = new TWEEN.Tween(globe.points.material).to({opacity: 0.3},duration/2).easing(TWEEN.Easing.Cubic.EaseOut).start();
   
   setTimeout(function(){
     var p2 = duration/Math.abs(trajectory[1].dist - distanceTarget) * 5
@@ -126,7 +134,7 @@ DAT.Globe = function(container, colorFn) {
 
   var scene, renderer, w, h;
   var mesh, atmosphere, point;
-
+  
   var overRenderer;
 
  
@@ -137,12 +145,13 @@ DAT.Globe = function(container, colorFn) {
   var mouse = { x: 0, y: 0 }, mouseOnDown = { x: 0, y: 0 };
       targetOnDown = { x: 0, y: 0 };
   
-  rotation = { x: 0, y: 0.0 };
+  var rotation = { x: 0, y: 0.0 };
   //target = { x: Math.PI*3/2, y: Math.PI / 6.0 };
   
   var distance = 100000; 
   var padding = 40;
   var PI_HALF = Math.PI / 2;
+  var effectFXAA;
 
   function init() {
 
@@ -158,7 +167,7 @@ DAT.Globe = function(container, colorFn) {
 
     scene = new THREE.Scene();
 
-    var geometry = new THREE.SphereGeometry(200, 40, 30);
+    var geometry = new THREE.SphereGeometry(R, 40, 30);
 
     shader = Shaders['earth'];
     
@@ -199,7 +208,7 @@ DAT.Globe = function(container, colorFn) {
 
         });
 
-    mesh = new THREE.Mesh(geometry, material);
+    mesh = new THREE.Mesh(geometry, material);//innitiate atmosphere
     mesh.scale.set( 1.2, 1.2, 1.2 );
     scene.add(mesh);
 
@@ -210,7 +219,7 @@ DAT.Globe = function(container, colorFn) {
 
     renderer = new THREE.WebGLRenderer({
       preserveDrawingBuffer: true, 
-      antialias: true
+      antialias: false
     });
     
     renderer.setSize(w, h);
@@ -218,6 +227,34 @@ DAT.Globe = function(container, colorFn) {
 
     renderer.domElement.style.position = 'absolute';
     renderer.domElement.id = 'canvas';
+
+        // postprocessing
+
+    var renderModel = new THREE.RenderPass( scene, camera );
+    var effectBloom = new THREE.BloomPass( 1.5 );
+    var effectFilm = new THREE.FilmPass( 0.5, 0.5, 1448, false );
+
+    effectFocus = new THREE.ShaderPass( THREE.FocusShader );
+
+    effectFocus.uniforms[ "screenWidth" ].value = window.innerWidth;
+    effectFocus.uniforms[ "screenHeight" ].value = window.innerHeight;
+
+    effectFocus.renderToScreen = true;
+    
+    effectFXAA = new THREE.ShaderPass( THREE.FXAAShader );
+    effectFXAA.uniforms[ 'resolution' ].value.set( 1 / window.innerWidth, 1 / window.innerHeight );
+
+
+
+    composer = new THREE.EffectComposer( renderer );
+
+    composer.addPass( renderModel );
+    //composer.addPass( effectBloom );
+    composer.addPass( effectFXAA );
+    //composer.addPass( effectFilm );
+    composer.addPass( effectFocus );
+
+
 
     container.appendChild(renderer.domElement);
 
@@ -249,7 +286,7 @@ DAT.Globe = function(container, colorFn) {
     this.is_animated = opts.animated;
     opts.format = opts.format || 'magnitude'; // other option is 'legend'
 
-    colorFnWrapper = function(total) { return colorFn(c_scale(total)); }
+    colorFnWrapper = function(total) { return colorFn(c_scale(total)); };
     
     if (opts.animated) {
       if (this._baseGeometry === undefined) {
@@ -296,6 +333,8 @@ DAT.Globe = function(container, colorFn) {
   };
 
 
+
+
   function createPoints() {
     if (this._baseGeometry !== undefined) {
       if (this.is_animated === false) {
@@ -331,20 +370,25 @@ DAT.Globe = function(container, colorFn) {
     }
   }
   
-
-  function addPoint(lat, lng, size, color, subgeo) {
-
+  function PointPosition(lat, lng, r) {
     var phi = (90 - lat) * Math.PI / 180;
     var theta = (180 - lng) * Math.PI / 180;
 
-    point.position.x = 200 * Math.sin(phi) * Math.cos(theta);
-    point.position.y = 200 * Math.cos(phi);
-    point.position.z = 200 * Math.sin(phi) * Math.sin(theta);
+    point.position.x = r * Math.sin(phi) * Math.cos(theta);
+    point.position.y = r * Math.cos(phi);
+    point.position.z = r * Math.sin(phi) * Math.sin(theta);
+
+  }
+
+
+  function addPoint(lat, lng, size, color, subgeo) {
+
+    PointPosition(lat,lng,R);
 
     point.lookAt(mesh.position);
 
-    point.scale.x = 0.4;
-    point.scale.y = 0.4;
+    point.scale.x = 0.2;
+    point.scale.y = 0.2;
 
     point.scale.z = Math.max( size, 0.1 ); // avoid non-invertible matrix
     point.updateMatrix();
@@ -412,6 +456,7 @@ DAT.Globe = function(container, colorFn) {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize( window.innerWidth, window.innerHeight );
+    effectFXAA.uniforms[ 'resolution' ].value.set( 1 / window.innerWidth, 1 / window.innerHeight );
   }
 
   function zoom(delta) {
@@ -448,8 +493,11 @@ DAT.Globe = function(container, colorFn) {
     //center of us lat: 39.8282 lng:98.5795
 
     camera.lookAt(point.position);
+    //composer.render( 0.01 );
+    //renderer.render(scene, camera);
 
-    renderer.render(scene, camera);
+    renderer.clear();
+    composer.render(0.001);
   }
 
   init();
@@ -526,18 +574,16 @@ DAT.Globe = function(container, colorFn) {
 
     $("#date").text(format_date(new Date(d_scale(t*l))));
        
-
-    //save image frame here...hope not going to kill my machine
-    //saveFrame();
     this._time = t;
 
   });
 
   this.addData = addData;
+  this.addParticle = addParticle;
   this.createPoints = createPoints;
   this.renderer = renderer;
   this.scene = scene;
-  //this.distanceTarget = distanceTarget;
+  this.colorFn = colorFn;
 
   return this;
 

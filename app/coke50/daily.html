@@ -32,12 +32,26 @@
 <script type="text/javascript" src="/coke50/third-party/three.min.js"></script>
 <script type="text/javascript" src="/coke50/third-party/Tween.js"></script>
 <script type="text/javascript" src="/coke50/js/daily.js"></script>
+<script type="text/javascript" src="/coke50/js/particle.js"></script>
 <script type="text/javascript" src="/coke50/js/camera.js"></script>
 <script type="text/javascript" src="/coke50/js/draw.js"></script>
 <script src="http://d3js.org/d3.v2.min.js?2.8.1"></script>
 <script type="text/javascript" src="/coke50/js/mouse.js"></script>
 <script src="http://code.jquery.com/jquery-1.9.1.js"></script>
 <script type="text/javascript" src="/coke50/js/libs/jquery-deparam.js"></script>
+
+<script src="/coke50/js/shaders/ConvolutionShader.js"></script>
+<script src="/coke50/js/shaders/CopyShader.js"></script>
+<script src="/coke50/js/shaders/FilmShader.js"></script>
+<script src="/coke50/js/shaders/FocusShader.js"></script>
+<script src="/coke50/js/shaders/FXAAShader.js"></script>
+
+<script src="/coke50/js/postprocessing/EffectComposer.js"></script>
+<script src="/coke50/js/postprocessing/MaskPass.js"></script>
+<script src="/coke50/js/postprocessing/RenderPass.js"></script>
+<script src="/coke50/js/postprocessing/BloomPass.js"></script>
+<script src="/coke50/js/postprocessing/ShaderPass.js"></script>
+<script src="/coke50/js/postprocessing/FilmPass.js"></script>
 
 <script type="text/javascript">
 
@@ -48,8 +62,11 @@
   var days = null;
   var tweens = []; cam_tweens = [];
   var each_day_max = [];
+  var all_day = [];
+  var top10 = ["ZPL3066255", "ZPL306641B", "ZPL306632D", "ZPL306671Q", "ZPL306638J", "ZPL3069076", "ZPL3067232", "ZPL3067315", "ZPL3067298", "ZPL306730A"];
+  var top10_dict = {};
   var test = 10; // IMPORTAMT!! Here set the number of days to animate (there are 335 days in total, takes 0.2 seconds to load 1 day)
-  var frame_speed = 2000; // IMPORTAMT!! Change the speed of the animation
+  var frame_speed = 4000; // IMPORTAMT!! Change the speed of the animation
   var start_delay = 2000;
   var sli_width = 1100; //
   var margin = {top: 20, right: 50, bottom: 20, left: 50},
@@ -124,6 +141,7 @@
 
 $(window).ready(function(){
  d3.csv("/coke50/data/Daily.csv", function(raw_data){
+  //d3.csv("/coke50/data/machine_all.csv", function(all_machine_data){
 
     var key = Object.keys(raw_data[0]);
     days = key.length - 3;    
@@ -140,10 +158,18 @@ $(window).ready(function(){
     
     for (var i = 0; i < test; i++ ){
       var each_day = [];
-
+      var index = 0;
 
       raw_data.forEach(function(d){
         each_day.push({id:d.machineId, lat:d.lat, lng:d.lng, total:parseFloat(d[i+1])});
+        
+      if (i == 0){  
+        if (top10.indexOf(d.machineId) >= 0){
+          top10_dict[d.machineId] = index;
+        }
+        index++
+      }  
+
       });
 
       console.log("data ready!", raw_data.length);
@@ -152,9 +178,11 @@ $(window).ready(function(){
       globe.addData(each_day, {format: 'magnitude', name: "day"+(i+1), animated: true});
       count++;
       console.log(count + " days added!");
+      all_day.push(each_day);
     
     }
     
+    console.log(top10_dict);
     globe.createPoints();
     //console.log(each_day_max);
     MIN_d = d3.min(each_day_max);
@@ -195,7 +223,7 @@ $(window).ready(function(){
     //globe.addData(data[1], {format: 'legend', name:'machine'});
     
     //globe.createPoints();
-    //globe.addData(data[2], {format: 'legend', name:'machine_all', animated: false});
+    //globe.addData(all_machine_data, {format: 'legend', name:'machine_all', animated: false});
     
     //globe.createPoints();
 
@@ -226,8 +254,8 @@ $(window).ready(function(){
 
     document.body.style.backgroundImage = 'none'; // remove loading
 
-  });
-
+  //});
+});
 
 //setInterval(saveFrame,500);
 

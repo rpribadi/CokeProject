@@ -13,7 +13,7 @@ function onDocumentKeyDown(event) {
       case 65:
         //press A
         //zoom in to us
-        zoom_to_top10(2000);
+        zoom_to_top10(4000);
         //camera_move(target_1,distanceTarget_1,-3,25);
         event.preventDefault();
         break;
@@ -21,6 +21,7 @@ function onDocumentKeyDown(event) {
         //press S
         //zoom in to top ones
         //camera_move(target_2,distanceTarget_2,-5,25);
+        create_particle();
         event.preventDefault();
         break;
       case 68:

@@ -51,8 +51,13 @@ zoom_to_top10 = function(duration){
     var tween = new TWEEN.Tween(globe.points.material).to({opacity: 0},duration*2).easing(TWEEN.Easing.Cubic.EaseOut).start();
     
   }, duration+500);
-  var image = THREE.ImageUtils.loadTexture(imgDir+'world_3.jpg');
-    
+
+  // world_3.jpg width is 6144 pixels, too wide for macbook pro
+  //var image = THREE.ImageUtils.loadTexture(imgDir+'world_3.jpg');
+
+  // Use 4096 pixel instead
+  var image = THREE.ImageUtils.loadTexture(imgDir+'world_3_4096.jpg');
+
   setTimeout(function(){
 
       mesh_globe.material.uniforms.texture.value = image;

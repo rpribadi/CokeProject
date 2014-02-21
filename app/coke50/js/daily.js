@@ -19,16 +19,6 @@ var target = { x: 3.0023889803846893, y: 0.7635987755982989 };
 var R = 200;
 //var distanceTarget = 100000;
 
-//var target_1 = {x: 2.964955396106033, y: 0.7201028706105379};
-//var target_2 = {x: 2.964955396106033, y: 0.7201028706105379};
-//var target_3 = {x: 2.964955396106033, y: 0.7201028706105379};
-
-
-//var target_2 = {x: 3.3556551396534653, y: 0.4944166519362625};
-//var target_3 = {x: 3.254085128246786, y: 0.5582591552116186};
-//var distanceTarget_1 = 460;
-//var distanceTarget_2 = 380;
-//var distanceTarget_3 = 400;
 var imgDir = '/coke50/image/';
 
 //set camera zoom in trajectory
@@ -53,7 +43,6 @@ zoom_to_top10 = function(duration){
 
   console.log(cam_tweens);
   //event.preventDefault();
-
   var tween = new TWEEN.Tween(globe.points.material).to({opacity: 0.3},duration/2).easing(TWEEN.Easing.Cubic.EaseOut).start();
   
   setTimeout(function(){
@@ -82,8 +71,6 @@ DAT.Globe = function(container, colorFn) {
     var c = new THREE.Color();
     //c.setHSL( ( 0.0 + ( x * 20 ) ), 1.0, 0.5 );
     c.setHSL( x, 1.0, 0.5 );
-    //console.log(0.6 - ( x * 0.5 ) );
-    //console.log(c);
     return c;
   };
 
@@ -134,11 +121,7 @@ DAT.Globe = function(container, colorFn) {
 
   var scene, renderer, w, h;
   var mesh, atmosphere, point;
-  
   var overRenderer;
-
- 
-
   var curZoomSpeed = 0;
   var zoomSpeed = 50;
 
@@ -146,8 +129,6 @@ DAT.Globe = function(container, colorFn) {
       targetOnDown = { x: 0, y: 0 };
   
   var rotation = { x: 0, y: 0.0 };
-  //target = { x: Math.PI*3/2, y: Math.PI / 6.0 };
-  
   var distance = 100000; 
   var padding = 40;
   var PI_HALF = Math.PI / 2;
@@ -171,12 +152,9 @@ DAT.Globe = function(container, colorFn) {
 
     shader = Shaders['earth'];
     
-    uniforms = THREE.UniformsUtils.clone(shader.uniforms);
-
+    uniforms = THREE.UniformsUtils.clone(shader.uniforms); 
     uniforms['texture'].value = THREE.ImageUtils.loadTexture(imgDir+'world.jpg');
-
     uniforms_2 = THREE.UniformsUtils.clone(shader.uniforms);
-
     uniforms_2['texture'].value = THREE.ImageUtils.loadTexture(imgDir+'world_3.jpg');
     
     //Here set the material of the globe
@@ -216,6 +194,7 @@ DAT.Globe = function(container, colorFn) {
     geometry.applyMatrix(new THREE.Matrix4().makeTranslation(0,0,-0.5));
 
     point = new THREE.Mesh(geometry);
+    point_top = new THREE.Mesh(geometry);
 
     renderer = new THREE.WebGLRenderer({
       preserveDrawingBuffer: true, 
@@ -228,7 +207,7 @@ DAT.Globe = function(container, colorFn) {
     renderer.domElement.style.position = 'absolute';
     renderer.domElement.id = 'canvas';
 
-        // postprocessing
+    // postprocessing
 
     var renderModel = new THREE.RenderPass( scene, camera );
     var effectBloom = new THREE.BloomPass( 1.5 );
@@ -244,17 +223,13 @@ DAT.Globe = function(container, colorFn) {
     effectFXAA = new THREE.ShaderPass( THREE.FXAAShader );
     effectFXAA.uniforms[ 'resolution' ].value.set( 1 / window.innerWidth, 1 / window.innerHeight );
 
+    //composer = new THREE.EffectComposer( renderer );
 
-
-    composer = new THREE.EffectComposer( renderer );
-
-    composer.addPass( renderModel );
+    //composer.addPass( renderModel );
     //composer.addPass( effectBloom );
-    composer.addPass( effectFXAA );
+    //composer.addPass( effectFXAA );
     //composer.addPass( effectFilm );
-    composer.addPass( effectFocus );
-
-
+    //composer.addPass( effectFocus );
 
     container.appendChild(renderer.domElement);
 
@@ -291,23 +266,27 @@ DAT.Globe = function(container, colorFn) {
     if (opts.animated) {
       if (this._baseGeometry === undefined) {
         this._baseGeometry = new THREE.Geometry();
+        this._topGeometry = new THREE.Geometry();
+        
         for (i = 0; i < data.length; i ++) {
           lat = parseFloat(data[i].lat);
           lng = parseFloat(data[i].lng);
           color = colorFnWrapper(parseFloat(data[i].total));
           size = 0;
-          addPoint(lat, lng, size, color, this._baseGeometry);
+          addPoint(lat, lng, size, color, this._baseGeometry,this._topGeometry);
         }
       }
       if(this._morphTargetId === undefined) {
         this._morphTargetId = 0;
       } else {
-        this._morphTargetId += 1;
+        this._morphTargetId += 2;
       }
       opts.name = opts.name || 'morphTarget'+this._morphTargetId;
     }
 
     var subgeo = new THREE.Geometry();
+    var topgeo = new THREE.Geometry();
+    
     for (i = 0; i < data.length; i++) {
       lat = parseFloat(data[i].lat);
       lng = parseFloat(data[i].lng);
@@ -315,62 +294,71 @@ DAT.Globe = function(container, colorFn) {
       size = parseFloat(data[i].total);
       size = size/5000;
       
-      addPoint(lat, lng, size, color, subgeo);
-
+      addPoint(lat, lng, size, color, subgeo, topgeo);
       //addPoint(lat, lng, size, color, opts.name,subgeo);
     }
-
     //console.log(subgeo);
     
     if (opts.animated) {
 
-      this._baseGeometry.morphTargets.push({'name': opts.name, vertices: subgeo.vertices});
+      this._baseGeometry.morphTargets.push({'name': opts.name + "-day", vertices: subgeo.vertices});
+      this._baseGeometry.morphTargets.push({'name': opts.name + "-night", vertices: this._baseGeometry.vertices});
       this._baseGeometry.morphColors.push({'name': opts.name, colors: subgeo.colors});
+       this._baseGeometry.morphColors.push({'name': opts.name, colors: subgeo.colors});
+      this._topGeometry.morphTargets.push({'name': opts.name + "-day", vertices: topgeo.vertices})
+      this._topGeometry.morphTargets.push({'name': opts.name + "-night", vertices: this._topGeometry.vertices})
     } else {
       this._baseGeometry = subgeo;
+      this._topGeometry = topgeo;
     }
 
+
+
   };
-
-
-
 
   function createPoints() {
     if (this._baseGeometry !== undefined) {
       if (this.is_animated === false) {
-        //console.log(this._baseGeometry);
         this.points = new THREE.Mesh(this._baseGeometry, new THREE.MeshBasicMaterial({
               color: 0xffffff,
               vertexColors: THREE.FaceColors,
               morphTargets: false
             }));
       } else {
-        console.log("is_animated != false");
         if (this._baseGeometry.morphTargets.length < 8) {
-          console.log('t l',this._baseGeometry.morphTargets.length);
           var padding = 8-this._baseGeometry.morphTargets.length;
-          console.log('padding', padding);
           for(var i=0; i<=padding; i++) {
-            console.log('padding',i);
             this._baseGeometry.morphTargets.push({'name': 'morphPadding'+i, vertices: this._baseGeometry.vertices});
             this._baseGeometry.morphColors.push({ 'name': 'morphPadding'+i, colors: this._baseGeometry.colors})
+            this._topGeometry.morphTargets.push({'name': 'morphPadding'+i, vertices: this._topGeometry.vertices});
+            this._topGeometry.morphColors.push({ 'name': 'morphPadding'+i, colors: this._topGeometry.colors})
+          
           }
         }
         this.points = new THREE.Mesh(this._baseGeometry, new THREE.MeshBasicMaterial({
-              color: 0xffffff,
-              attributes: {},
-              vertexColors: THREE.FaceColors,
-              //blending: THREE.AdditiveBlending, 
-              transparent: true,
-              opacity:0.6,
-              morphTargets: true
-            }));
+          color: 0xffffff,
+          attributes: {},
+          vertexColors: THREE.FaceColors,
+          transparent: true,
+          opacity:0.6,
+          morphTargets: true
+        }));
+
+        this.points_top = new THREE.Mesh(this._topGeometry, new THREE.MeshBasicMaterial({
+          color: 0xffffff,
+          attributes: {},
+          vertexColors: THREE.FaceColors,
+          transparent: true,
+          opacity:1,
+          morphTargets: true
+        }));        
       }      
       scene.add(this.points);
+      scene.add(this.points_top);
     }
   }
   
-  function PointPosition(lat, lng, r) {
+  function PointPosition(lat, lng,size,r) {
     var phi = (90 - lat) * Math.PI / 180;
     var theta = (180 - lng) * Math.PI / 180;
 
@@ -378,14 +366,19 @@ DAT.Globe = function(container, colorFn) {
     point.position.y = r * Math.cos(phi);
     point.position.z = r * Math.sin(phi) * Math.sin(theta);
 
+    point_top.position.x = (r + size + 1.5) * Math.sin(phi) * Math.cos(theta);
+    point_top.position.y = (r + size + 1.5) * Math.cos(phi);
+    point_top.position.z = (r + size + 1.5) * Math.sin(phi) * Math.sin(theta);
+
   }
 
 
-  function addPoint(lat, lng, size, color, subgeo) {
+  function addPoint(lat, lng, size, color, subgeo, topgeo) {
 
-    PointPosition(lat,lng,R);
+    PointPosition(lat,lng,size,R);
 
     point.lookAt(mesh.position);
+    point_top.lookAt(mesh.position);
 
     point.scale.x = 0.2;
     point.scale.y = 0.2;
@@ -393,12 +386,22 @@ DAT.Globe = function(container, colorFn) {
     point.scale.z = Math.max( size, 0.1 ); // avoid non-invertible matrix
     point.updateMatrix();
 
+    point_top.scale.x = 0.3;
+    point_top.scale.y = 0.3;
+    point_top.scale.z = 0.3;
+    point_top.updateMatrix();
+    
+
     for (var i = 0; i < point.geometry.faces.length; i++) {
       point.geometry.faces[i].color = color;
+      point_top.geometry.faces[i].color = color;
       subgeo.colors.push(color);
     }
       
-    THREE.GeometryUtils.merge(subgeo, point);  
+    THREE.GeometryUtils.merge(subgeo, point);
+
+    THREE.GeometryUtils.merge(topgeo, point_top);
+
   }
 
   function onMouseDown(event) {
@@ -494,10 +497,11 @@ DAT.Globe = function(container, colorFn) {
 
     camera.lookAt(point.position);
     //composer.render( 0.01 );
-    //renderer.render(scene, camera);
-
     renderer.clear();
-    composer.render(0.001);
+    renderer.render(scene, camera);
+
+    
+    //composer.render(0.001);
   }
 
   init();
@@ -525,20 +529,25 @@ DAT.Globe = function(container, colorFn) {
     }
     validMorphs.sort();
     var l = validMorphs.length;
+    console.log("l= "+ l);
     var scaledt = t*l+1;
-    if(scaledt >= test) return;
+    console.log("scaledt= "+scaledt);
+    if(scaledt >= test*2) return;
     var index = Math.floor(scaledt);
    
-    for (i = 0; i < validMorphs.length; i++) {
+    for (i = 0; i < l; i++) {
       this.points.morphTargetInfluences[validMorphs[i]] = 0;
+      this.points_top.morphTargetInfluences[validMorphs[i]] = 0;
     }
 
     var lastIndex = index - 1;
     var leftover = scaledt - index;
     if (lastIndex >= 0) {
       this.points.morphTargetInfluences[lastIndex] = 1 - leftover;
+      this.points_top.morphTargetInfluences[lastIndex] = 1 - leftover;
     }
     this.points.morphTargetInfluences[index] = leftover;
+    this.points_top.morphTargetInfluences[index] = leftover;
     
     ////////////////
     //update color//
@@ -550,7 +559,23 @@ DAT.Globe = function(container, colorFn) {
           var ori_h = this.points.geometry.morphColors[lastIndex].colors[c].getHSL().h
           var color_distance = this.points.geometry.morphColors[index].colors[c].getHSL().h - ori_h;
           var color_delta = color_distance * leftover;
-          this.points.geometry.faces[c].color.setHSL(ori_h+color_delta,1.0,0.5);
+         
+          //night         
+          if(index%2 == 1) {
+            //this.points.geometry.faces[c].color.setHSL(ori_h+color_delta * leftover,1.0,0.5 + color_delta*5);
+            this.points.geometry.faces[c].color.setHSL(ori_h+color_delta * leftover,1.0, 0.5 - leftover * 0.4);
+            
+            this.points_top.geometry.faces[c].color.setHSL(ori_h+color_delta,1.0,0.5 - leftover * 0.4);
+          } 
+
+          //day
+          else {
+            this.points.geometry.faces[c].color.setHSL(ori_h+color_delta * leftover,1.0, 0.1 + leftover * 0.4);
+            
+            this.points_top.geometry.faces[c].color.setHSL(ori_h+color_delta,1.0, 0.1 + leftover * 0.4);
+
+          }  
+
       } 
     }
     this.points.geometry.colorsNeedUpdate = true;
@@ -559,15 +584,13 @@ DAT.Globe = function(container, colorFn) {
     //update slider//
     /////////////////
     d3.select("#dot")
-      .transition()
-      
+      .transition()      
       .attr("cx",x_scale(d_scale(t*l)))
       .ease("linear")
       .duration(0); 
 
     d3.select("#date")
-      .transition()
-      
+      .transition()     
       .attr("transform", "translate(" + x_scale(d_scale(t*l)) + ", 20)")
       .ease("linear")
       .duration(0);

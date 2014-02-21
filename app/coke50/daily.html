@@ -57,16 +57,14 @@
 
   var container = document.getElementById('container');
   var globe = new DAT.Globe(container);
-
-
   var days = null;
   var tweens = []; cam_tweens = [];
   var each_day_max = [];
   var all_day = [];
   var top10 = ["ZPL3066255", "ZPL306641B", "ZPL306632D", "ZPL306671Q", "ZPL306638J", "ZPL3069076", "ZPL3067232", "ZPL3067315", "ZPL3067298", "ZPL306730A"];
   var top10_dict = {};
-  var test = 10; // IMPORTAMT!! Here set the number of days to animate (there are 335 days in total, takes 0.2 seconds to load 1 day)
-  var frame_speed = 4000; // IMPORTAMT!! Change the speed of the animation
+  var test = 5; // IMPORTAMT!! Here set the number of days to animate (there are 335 days in total, takes 0.2 seconds to load 1 day)
+  var frame_speed = 1000; // IMPORTAMT!! Change the speed of the animation
   var start_delay = 2000;
   var sli_width = 1100; //
   var margin = {top: 20, right: 50, bottom: 20, left: 50},
@@ -85,11 +83,11 @@
   var settime = function(globe,pointer,t) {  //Here generate the animation chain
     
       //animate globe with bars based on consumption (function defined in daily.js line 463)
-      var tween = new TWEEN.Tween(globe).to({time: t/test},frame_speed).easing(TWEEN.Easing.Cubic.EaseOut);
+      var tween = new TWEEN.Tween(globe).to({time: t/(test*2)},frame_speed).easing(TWEEN.Easing.Cubic.EaseOut);
       tweens.push(tween);
 
       //animate camera
-      var cam_tween = new TWEEN.Tween(this).to({distanceTarget : cam_scale(each_day_max[t])},frame_speed).easing(TWEEN.Easing.Cubic.EaseOut);
+      var cam_tween = new TWEEN.Tween(this).to({distanceTarget : cam_scale(each_day_max[parseInt(t/2)])},frame_speed).easing(TWEEN.Easing.Cubic.EaseOut);
       cam_tweens.push(cam_tween);
 
       //Can I merge two tween with diiferent targets?  
@@ -175,7 +173,8 @@ $(window).ready(function(){
       console.log("data ready!", raw_data.length);
       each_day_max.push( d3.max(each_day, function(d){ return d.total; }));
       
-      globe.addData(each_day, {format: 'magnitude', name: "day"+(i+1), animated: true});
+      globe.addData(each_day, {format: 'magnitude', name: "day"+(i+1), animated: true, type : "day"});
+      //globe.addData(each_day, {format: 'magnitude', name: "day"+(i+1), animated: true, type = "night"});
       count++;
       console.log(count + " days added!");
       all_day.push(each_day);
@@ -205,7 +204,7 @@ $(window).ready(function(){
     pointer = document.getElementById("dot");
 
     //animate_slider();
-    for (var t = 0; t < test; t++) {
+    for (var t = 0; t < test*2; t++) {
         settime(globe,pointer,t);             
     }
     TWEEN.start();

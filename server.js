@@ -3,7 +3,7 @@ var app = express();
 var fs = require('fs');
 
 app.configure(function() {
-    app.use(express.bodyParser());
+    app.use(express.bodyParser({limit: '50mb'}));
     app.use(express.static(__dirname + '/app'));
 });
 

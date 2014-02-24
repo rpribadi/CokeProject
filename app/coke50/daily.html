@@ -17,10 +17,10 @@
     class="bull">&bull;</span> <a href="https://github.com/dataarts/webgl-globe">Get
   the code</a> <span class="bull">&bull;</span> By the Google Data Arts Team</a>
 </div>
--->
+
 <div id="title">
   Coca-cola Freestyle
-</div>
+</div>-->
 <div id="slider">
   <span style="top:0;position:absolute"></span>
 </div>  
@@ -63,9 +63,10 @@
   var all_day = [];
   var top10 = ["ZPL3066255", "ZPL306641B", "ZPL306632D", "ZPL306671Q", "ZPL306638J", "ZPL3069076", "ZPL3067232", "ZPL3067315", "ZPL3067298", "ZPL306730A"];
   var top10_dict = {};
-  var test = 5; // IMPORTAMT!! Here set the number of days to animate (there are 335 days in total, takes 0.2 seconds to load 1 day)
-  var frame_speed = 1000; // IMPORTAMT!! Change the speed of the animation
-  var start_delay = 2000;
+  var start_day = 95 , end_day = 105;
+  var test = end_day - start_day; // IMPORTAMT!! Here set the number of days to animate (there are 335 days in total, takes 0.2 seconds to load 1 day)
+  var frame_speed = 4000; // IMPORTAMT!! Change the speed of the animation
+  var start_delay = 3000;
   var sli_width = 1100; //
   var margin = {top: 20, right: 50, bottom: 20, left: 50},
       width = sli_width + margin.left + margin.right,
@@ -82,6 +83,7 @@
 
   var settime = function(globe,pointer,t) {  //Here generate the animation chain
     
+
       //animate globe with bars based on consumption (function defined in daily.js line 463)
       var tween = new TWEEN.Tween(globe).to({time: t/(test*2)},frame_speed).easing(TWEEN.Easing.Cubic.EaseOut);
       tweens.push(tween);
@@ -154,14 +156,14 @@ $(window).ready(function(){
     
     var count = 0;
     
-    for (var i = 0; i < test; i++ ){
+    for (var i = start_day; i < end_day; i++ ){
       var each_day = [];
       var index = 0;
 
       raw_data.forEach(function(d){
         each_day.push({id:d.machineId, lat:d.lat, lng:d.lng, total:parseFloat(d[i+1])});
         
-      if (i == 0){  
+      if (i == start_day){  
         if (top10.indexOf(d.machineId) >= 0){
           top10_dict[d.machineId] = index;
         }
@@ -204,6 +206,7 @@ $(window).ready(function(){
     pointer = document.getElementById("dot");
 
     //animate_slider();
+    var tween = new TWEEN.Tween(target).to({x:3.0023889803846893, y:0.7635987755982989},2000).start();
     for (var t = 0; t < test*2; t++) {
         settime(globe,pointer,t);             
     }

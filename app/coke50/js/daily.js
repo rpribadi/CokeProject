@@ -15,7 +15,8 @@ var DAT = DAT || {};
 var camera = null;
 var composer, effectFocus;
 var rotation = null; 
-var target = { x: 3.0023889803846893, y: 0.7635987755982989 };
+
+var target = { x: 0, y: 0 };
 var R = 200;
 //var distanceTarget = 100000;
 
@@ -27,21 +28,24 @@ var trajectory = [
     targ: {x: 3.2484077502602235, y: 0.5993469676865384}},
 
   {dist : 220,
-    targ: {x: 3.2713414803550953, y: 0.5799547862833997}}
+    targ: {x: 3.2713414803550953, y: 0.5799547862833997}},
+
+ {dist : 440,
+    targ: {x: 4.191986204907064, y: 0.4085451142172577}},
+
 ]
 
-
+//{x: 2.255880835756043, y: 0.5066305977916148}
+//442
 // Press keyboard "a" to start camera zoom in onto earth
 zoom_to_top10 = function(duration){
 
   var p1 = duration/Math.abs(trajectory[0].dist - distanceTarget) * 5
   camera_move(trajectory[0].targ,trajectory[0].dist,-5,p1);
 
-  //remove camera tween:
-  var t = parseInt(globe.time * test); // get current globe time;
-  cam_tweens[t+1].stop();
+  stop_tween();
 
-  console.log(cam_tweens);
+  //console.log(cam_tweens);
   //event.preventDefault();
   var tween = new TWEEN.Tween(globe.points.material).to({opacity: 0.3},duration/2).easing(TWEEN.Easing.Cubic.EaseOut).start();
   
@@ -49,6 +53,7 @@ zoom_to_top10 = function(duration){
     var p2 = duration/Math.abs(trajectory[1].dist - distanceTarget) * 5
     camera_move(trajectory[1].targ,trajectory[1].dist,-5,p2);
     var tween = new TWEEN.Tween(globe.points.material).to({opacity: 0},duration*2).easing(TWEEN.Easing.Cubic.EaseOut).start();
+    var tween = new TWEEN.Tween(globe.points_top.material).to({opacity: 0},duration*2).easing(TWEEN.Easing.Cubic.EaseOut).start();
     
   }, duration+500);
 
@@ -56,13 +61,41 @@ zoom_to_top10 = function(duration){
   //var image = THREE.ImageUtils.loadTexture(imgDir+'world_3.jpg');
 
   // Use 4096 pixel instead
-  var image = THREE.ImageUtils.loadTexture(imgDir+'world_3_4096.jpg');
+ //var image = THREE.ImageUtils.loadTexture(imgDir+'world_3_4096.jpg');
 
+/*
   setTimeout(function(){
 
       mesh_globe.material.uniforms.texture.value = image;
   },duration + 1500);  
+  */
+}
+stop_tween =  function(){
+    var t = parseInt(globe.time * test); // get current globe time;
+    cam_tweens[t*2+1].stop();
+}
+
+zoom_to_water = function(duration){
+
+  var p1 = duration/Math.abs(trajectory[2].dist - distanceTarget) * 5
+  camera_move(trajectory[2].targ,trajectory[2].dist,-5,p1);
+
+  //remove camera tween:
+
+  stop_tween();
+  /*
+  console.log(cam_tweens);
+
+  //event.preventDefault();
+  var tween = new TWEEN.Tween(globe.points.material).to({opacity: 0.3},duration/2).easing(TWEEN.Easing.Cubic.EaseOut).start();
   
+  setTimeout(function(){
+    var p2 = duration/Math.abs(trajectory[1].dist - distanceTarget) * 5
+    camera_move(trajectory[1].targ,trajectory[1].dist,-5,p2);
+    var tween = new TWEEN.Tween(globe.points.material).to({opacity: 0},duration*2).easing(TWEEN.Easing.Cubic.EaseOut).start();
+    var tween = new TWEEN.Tween(globe.points_top.material).to({opacity: 0},duration*2).easing(TWEEN.Easing.Cubic.EaseOut).start();    
+  }, duration+500);
+*/
 }
 
 
@@ -260,7 +293,10 @@ DAT.Globe = function(container, colorFn) {
 
     c_scale = d3.scale.linear()
                     .domain([MIN, MAX])
-                    .range([0.0, 0.25]);
+                    .range([0.0, 0.2]);
+
+                    //0.91 0.99 coke
+                    //0.33,0.25
 
     opts.animated = opts.animated || false;
     this.is_animated = opts.animated;
@@ -506,7 +542,7 @@ DAT.Globe = function(container, colorFn) {
     renderer.render(scene, camera);
 
     
-    //composer.render(0.001);
+    //composer.render(0.01);
   }
 
   init();
@@ -534,9 +570,9 @@ DAT.Globe = function(container, colorFn) {
     }
     validMorphs.sort();
     var l = validMorphs.length;
-    console.log("l= "+ l);
+   
     var scaledt = t*l+1;
-    console.log("scaledt= "+scaledt);
+    
     if(scaledt >= test*2) return;
     var index = Math.floor(scaledt);
    
@@ -590,17 +626,17 @@ DAT.Globe = function(container, colorFn) {
     /////////////////
     d3.select("#dot")
       .transition()      
-      .attr("cx",x_scale(d_scale(t*l)))
+      .attr("cx",x_scale(d_scale(start_day + t*l/2)))
       .ease("linear")
       .duration(0); 
 
     d3.select("#date")
       .transition()     
-      .attr("transform", "translate(" + x_scale(d_scale(t*l)) + ", 20)")
+      .attr("transform", "translate(" + x_scale(d_scale(start_day + t*l/2 + 0.5)) + ", 20)")
       .ease("linear")
       .duration(0);
 
-    $("#date").text(format_date(new Date(d_scale(t*l))));
+    $("#date").text(format_date(new Date(d_scale(start_day + t*l/2 +0.5))));
        
     this._time = t;
 

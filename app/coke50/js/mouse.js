@@ -27,7 +27,7 @@ function onDocumentKeyDown(event) {
       case 68:
         //press D
         //zoom in to ground
-        //camera_move(target_3,distanceTarget_3,5,25);
+        zoom_to_water(4000);
         event.preventDefault();
         break;
       case 68:

@@ -546,6 +546,69 @@ DAT.Globe = function(container, colorFn) {
   }
 
   init();
+
+    $.when( $.getJSON("coke50/data/states.geojson.json") ).then(function(data){
+        add_countries(data);
+    });
+
+
+    add_countries = function(data) {
+        console.log(data);
+        geoConfig = function() {
+
+            this.mercator = d3.geo.equirectangular();
+            this.path = d3.geo.path().projection(this.mercator);
+            this.mercator.scale(500);
+        }
+
+        this.geo = new geoConfig();
+        var states = [];
+        var i, j;
+
+        // convert to threejs meshes
+        for (i = 0 ; i < data.features.length ; i++) {
+            var geoFeature = data.features[i];
+            var properties = geoFeature.properties;
+            var feature = this.geo.path(geoFeature);
+
+            // we only need to convert it to a three.js path
+            var mesh = transformSVGPathExposed(feature);
+            console.log(mesh);
+            // add to array
+            for (j = 0 ; j < mesh.length ; j++) {
+                states.push({"data": properties, "mesh": mesh[j]});
+            }
+        }
+        console.log(states);
+        // extrude paths and add color
+        for (i = 0 ; i < states.length ; i++) {
+
+            // create material color based on average
+            var material = new THREE.MeshPhongMaterial({
+                color:0xCCCC99,
+                opacity:1
+            });
+
+            // extrude mesh
+            var shape3d = states[i].mesh.extrude({
+                amount: 1,
+                bevelEnabled: false
+            });
+
+            // create a mesh based on material and extruded shape
+            var toAdd = new THREE.Mesh(shape3d, material);
+            console.log(toAdd);
+            scene.add(toAdd);
+        }
+    }
+
+//    getRandomColor = function(){
+//        var color = Math.floor(Math.random() * 16777216).toString(16);
+//        return '#000000'.slice(0, -color.length) + color;
+//    }
+
+
+
   this.animate = animate;
   this.render = render;
 

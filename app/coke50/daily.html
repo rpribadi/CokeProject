@@ -10,17 +10,7 @@
 <body>
 
 <div id="container"></div>
-<!--
-<div id="info">
-  The <a href="http://www.chromeexperiments.com/globe">WebGL Globe</a> is an
-  open platform for visualizing geographic data. <span
-    class="bull">&bull;</span> <a href="https://github.com/dataarts/webgl-globe">Get
-  the code</a> <span class="bull">&bull;</span> By the Google Data Arts Team</a>
-</div>
 
-<div id="title">
-  Coca-cola Freestyle
-</div>-->
 <div id="slider">
   <span style="top:0;position:absolute"></span>
 </div>  
@@ -32,7 +22,7 @@
 <script type="text/javascript" src="/coke50/third-party/three.min.js"></script>
 <script type="text/javascript" src="/coke50/third-party/Tween.js"></script>
 <script type="text/javascript" src="/coke50/js/daily.js"></script>
-<script type="text/javascript" src="/coke50/js/particle.js"></script>
+<!--<script type="text/javascript" src="/coke50/js/particle.js"></script>-->
 <script type="text/javascript" src="/coke50/js/camera.js"></script>
 <script type="text/javascript" src="/coke50/js/draw.js"></script>
 <script src="http://d3js.org/d3.v2.min.js?2.8.1"></script>
@@ -61,11 +51,17 @@
   var tweens = []; cam_tweens = [];
   var each_day_max = [];
   var all_day = [];
-  var top10 = ["ZPL3066255", "ZPL306641B", "ZPL306632D", "ZPL306671Q", "ZPL306638J", "ZPL3069076", "ZPL3067232", "ZPL3067315", "ZPL3067298", "ZPL306730A"];
-  var top10_dict = {};
-  var start_day = 95 , end_day = 105;
-  var test = end_day - start_day; // IMPORTAMT!! Here set the number of days to animate (there are 335 days in total, takes 0.2 seconds to load 1 day)
-  var frame_speed = 4000; // IMPORTAMT!! Change the speed of the animation
+  var top_ids = [];
+  var four_ids = {ny:"ZPL305783D", gt:"ZPL307555G", al:"ZPL3050227", at:"ZPL3069076"};
+  var brands = ['coke','sprite','drpepper'];
+  var brand_add = false;
+  //var top10 = ["ZPL3066255", "ZPL306641B", "ZPL306632D", "ZPL306671Q", "ZPL306638J", "ZPL3069076", "ZPL3067232", "ZPL3067315", "ZPL3067298", "ZPL306730A"];
+  var top_dict = {};
+  var start_day = 87 , end_day = 90; // for brand end_day = 186; March 31 = 90; brand 184-187
+  var test = end_day - start_day;
+  var tween_length = brand_add ? (test+brands.length + 1)*2 : test * 2; // IMPORTAMT!! Here set the number of days to animate (there are 335 days in total, takes 0.2 seconds to load 1 day)
+  var frame_speed = 2000;
+  var frame_speed_zoom = 12000; // USE 12000 for exporting. IMPORTAMT!! Change the speed of the animation
   var start_delay = 3000;
   var sli_width = 1100; //
   var margin = {top: 20, right: 50, bottom: 20, left: 50},
@@ -79,28 +75,44 @@
     .append("g")
       .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-
-
   var settime = function(globe,pointer,t) {  //Here generate the animation chain
-    
 
       //animate globe with bars based on consumption (function defined in daily.js line 463)
-      var tween = new TWEEN.Tween(globe).to({time: t/(test*2)},frame_speed).easing(TWEEN.Easing.Cubic.EaseOut);
+
+      if (brand_add == true && t == tween_length -1){
+
+        var tween = new TWEEN.Tween(globe).to({time: t/tween_length},frame_speed).easing(TWEEN.Easing.Cubic.EaseOut);
+        tween.delay(64000);
+      } else {
+      
+      var tween = new TWEEN.Tween(globe).to({time: t/tween_length},frame_speed).easing(TWEEN.Easing.Cubic.EaseOut); 
+      }
       tweens.push(tween);
 
       //animate camera
-      var cam_tween = new TWEEN.Tween(this).to({distanceTarget : cam_scale(each_day_max[parseInt(t/2)])},frame_speed).easing(TWEEN.Easing.Cubic.EaseOut);
+      var camera_position = 0;
+      //day camera
+      if (t % 2 == 0 ) camera_position = cam_scale(each_day_max[parseInt(t/2)]);
+      //night camera
+      else camera_position = cam_scale(0);
+
+
+
+      var cam_tween = new TWEEN.Tween(globe).to({distanceTarget : camera_position},frame_speed).easing(TWEEN.Easing.Cubic.EaseOut);
+
       cam_tweens.push(cam_tween);
+
+      if (t > 0 ){
+        tweens[t-1].chain(tween);
+        cam_tweens[t-1].chain(cam_tween);
+      }
 
       //Can I merge two tween with diiferent targets?  
       if(t==0){
         tween.delay(start_delay).start();
         cam_tween.delay(start_delay).start();
         
-      } else {
-        tweens[t-1].chain(tween);
-        cam_tweens[t-1].chain(cam_tween);
-      }
+      } 
     
   };
 
@@ -140,8 +152,18 @@
 
 
 $(window).ready(function(){
+
  d3.csv("/coke50/data/Daily.csv", function(raw_data){
+  d3.csv("/coke50/data/machines.csv", function(machine_data){
+    d3.csv("/coke50/data/brand_0705_r.csv", function(brand_data){
+      d3.csv("/coke50/data/topbrand.csv", function(top_brand){
   //d3.csv("/coke50/data/machine_all.csv", function(all_machine_data){
+
+    var top500 = machine_data.slice(0,1000);
+   
+    top500.forEach(function(d){
+      top_ids.push(d.machineId);
+    })
 
     var key = Object.keys(raw_data[0]);
     days = key.length - 3;    
@@ -153,6 +175,7 @@ $(window).ready(function(){
 
     MIN = d3.min(minimum);
     MAX = d3.max(maximum);
+    console.log("min" + MIN + "; max:" + MAX);
     
     var count = 0;
     
@@ -161,11 +184,11 @@ $(window).ready(function(){
       var index = 0;
 
       raw_data.forEach(function(d){
-        each_day.push({id:d.machineId, lat:d.lat, lng:d.lng, total:parseFloat(d[i+1])});
+        each_day.push({id:d.machineId, lat:d.lat, lng:d.lng, total:parseFloat(d[i])});
         
       if (i == start_day){  
-        if (top10.indexOf(d.machineId) >= 0){
-          top10_dict[d.machineId] = index;
+        if (top_ids.indexOf(d.machineId) >= 0){
+          top_dict[d.machineId] = index;
         }
         index++
       }  
@@ -175,26 +198,36 @@ $(window).ready(function(){
       console.log("data ready!", raw_data.length);
       each_day_max.push( d3.max(each_day, function(d){ return d.total; }));
       
-      globe.addData(each_day, {format: 'magnitude', name: "day"+(i+1), animated: true, type : "day"});
+        globe.addData(each_day, {format: 'magnitude', name: "day"+(i), animated: true, type : "day"});
       //globe.addData(each_day, {format: 'magnitude', name: "day"+(i+1), animated: true, type = "night"});
       count++;
       console.log(count + " days added!");
       all_day.push(each_day);
     
     }
-    
-    console.log(top10_dict);
+
+    //add brand 
+    if (brand_add){
+
+      for (var b = 0; b < 3; b++){
+        globe.addData(brand_data, {format: 'magbitude', name: brands[b], animated: true, type : "brand"});
+        each_day_max.push(d3.max(brand_data, function(d){ return parseInt(d[brands[b]]);}));
+      }
+      //console.log(top_brand);
+      globe.addData(top_brand,{format: 'magbitude', name: 'top_brand', animated: true, type : "top_brand"});
+      each_day_max.push(d3.max(top_brand, function(d){ return parseInt(d.total);}));
+    }
     globe.createPoints();
     //console.log(each_day_max);
     MIN_d = d3.min(each_day_max);
     MAX_d = d3.max(each_day_max);
 
     cam_scale = d3.scale.linear()
-              .domain([MIN_d, MAX_d])
+              .domain([0, MAX_d])
               .range([c_close, c_far]);
     
     d_scale = d3.time.scale()
-              .domain([0, days])
+              .domain([1, days])
               .range([new Date("Jan 01 2013 00:00:00 GMT-0500 (EST)"), new Date("Dec 01 2013 00:00:00 GMT-0500 (EST)")]);
 
    
@@ -207,27 +240,12 @@ $(window).ready(function(){
 
     //animate_slider();
     var tween = new TWEEN.Tween(target).to({x:3.0023889803846893, y:0.7635987755982989},2000).start();
-    for (var t = 0; t < test*2; t++) {
+
+    
+    for (var t = 0; t < tween_length; t++) {
         settime(globe,pointer,t);             
     }
     TWEEN.start();
-    
-    //var top50 = data[1].slice(0,50);
-    
-    //globe.addData(data[0], {format: 'legend', name:'dot'});
-    
-    //globe.createPoints();
-    
-    //globe.addData(top50, {format: 'legend', name:'machine50'});
-    
-    //globe.createPoints();
-
-    //globe.addData(data[1], {format: 'legend', name:'machine'});
-    
-    //globe.createPoints();
-    //globe.addData(all_machine_data, {format: 'legend', name:'machine_all', animated: false});
-    
-    //globe.createPoints();
 
      var params = $.deparam(window.location.search.substring(1));
      console.log(params)
@@ -255,8 +273,9 @@ $(window).ready(function(){
      }
 
     document.body.style.backgroundImage = 'none'; // remove loading
-
-  //});
+    });
+    });
+  });
 });
 
 //setInterval(saveFrame,500);

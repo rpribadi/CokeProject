@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+body {
+  margin: 0;
+  background-color: #000000;
+}
+
+
+
+</style>
+<body>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+
+<script>
+  // Models the normal distribution
+  var Gaussian = function(mean, variance) {
+    if (variance <= 0) {
+      throw new Error('Variance must be > 0 (but was ' + variance + ')');
+    }
+    this.mean = mean;
+    this.variance = variance;
+    this.standardDeviation = Math.sqrt(variance);
+  }
+  // Probability density function
+  Gaussian.prototype.pdf = function(x) {
+    var m = this.standardDeviation * Math.sqrt(2 * Math.PI);
+    var e = Math.exp(-Math.pow(x - this.mean, 2) / (2 * this.variance));
+    return e / m;
+  };
+</script>
+
+<script>
+
+      var sli_width = 1800;
+      var days = 365;
+      var hours = 1;
+      var scale = 2;
+      var stretch_factor = 100;
+      var stretch_width = 30
+
+
+      var margin = {top: 20, right: 50, bottom: 20, left: 50},
+          width = sli_width + margin.left + margin.right,
+          height = 100 + margin.top + margin.bottom;
+      
+      var svg = d3.select("body").append("svg")
+          .attr("width", width)
+          .attr("height", height)
+        .append("g")
+          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+      var lineData = [ { "x": 0,   "y": 0},  { "x": 0,  "y": 5}];
+
+  function clear_svg(){
+    d3.select("svg").remove();
+    svg = d3.select("body").append("svg")
+          .attr("width", width)
+          .attr("height", height)
+        .append("g")
+          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+  }
+
+
+  function draw_scale(x){
+     
+    console.log("draw at " + x);
+     //This is the accessor function we talked about above
+      var lineFunction = d3.svg.line()
+          .x(function(d) { return d.x; })
+          .y(function(d) { return d.y; })
+         .interpolate("linear");
+
+      var g = new Gaussian(0,stretch_width);
+      var d0 = 0;
+      var offset = 0; //how much have we moved from actual pos?
+      var ref = x; //reference for calculating the added offset
+      console.log("ref = " + ref);
+      for (var i = 0; i < days * hours; i++){
+        if(i>x){
+            ref = x+1;
+            console.log("ref = " + ref);
+        }
+        var c_offset = (Math.max(g.pdf(Math.abs(i-ref)),1/stretch_factor)-1/stretch_factor)*stretch_factor;
+        offset += c_offset;
+        if(c_offset > 0)
+            console.log(i + " offset " + offset);
+        translate = d0 + i*scale + offset;
+        if(i==x){
+            color = "blue";
+        } else {
+            color = "white";
+        }
+
+        var mag = (Math.max(g.pdf(Math.abs(i-x)),1/stretch_factor)-1/stretch_factor)*stretch_factor;
+        if(mag > 0){
+            ld = [ { "x": 0,   "y": 0-mag},  { "x": 0,  "y": 5+mag}];
+        } else {
+            ld = lineData;
+        }
+
+        var lineGraph = svg.append("path")
+                           .attr("d", lineFunction(ld))
+                            .attr("stroke", color)
+                            .attr("class","line")
+                            .attr("stroke-width", 1)
+                            .attr("transform","translate(" + translate + ",0)")
+                            .attr("fill", "none"); 
+      }
+    }
+    draw_scale(200);
+
+</script>
+
+<input type="range"  min="0" max="365" onchange="clear_svg();draw_scale(parseInt(this.value));"/>
+</body>
+</html>

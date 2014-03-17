@@ -6,9 +6,9 @@ function create_particle(){
 	var consumption_all = all_day[current_day];
 	var consumption_top = [];
 	
-	top10.forEach(function(d){
+	top_ids.forEach(function(d){
 		
-		var machine_c = consumption_all[top10_dict[d]];
+		var machine_c = consumption_all[top_dict[d]];
 		//consumption_top.push(machine_c);
 		globe.addParticle(machine_c);
 
@@ -17,7 +17,7 @@ function create_particle(){
 }
 
 addParticle = function(data){
-	var total = 200;
+	var total = 400;
 	var lat, lng, size, color, i, step, colorFnWrapper;
 	colorFnWrapper = function(total) { return globe.colorFn(c_scale(total)); };
 	var size = parseFloat(data.total)/5000;
@@ -49,7 +49,7 @@ addParticle = function(data){
 	  geometry.vertices[i] = vertice_temp;
 	}
 
-	var particles = new THREE.ParticleSystem( geometry, new THREE.ParticleSystemMaterial( { size: 0.3, color: color } ) );
+	var particles = new THREE.ParticleSystem( geometry, new THREE.ParticleSystemMaterial( { size: 0.2, color: color } ) );
 	globe.scene.add(particles);
 	//console.log(geometry);
 }

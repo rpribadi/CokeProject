@@ -15,6 +15,22 @@ app.get('/daily.html', function(req, res) {
     res.sendfile(__dirname + '/app/coke50/daily.html');
 });
 
+app.get('/brand.html', function(req, res) {
+    res.sendfile(__dirname + '/app/coke50/brand.html');
+});
+
+app.get('/timeline.html', function(req, res) {
+    res.sendfile(__dirname + '/app/coke50/timeline.html');
+});
+
+app.get('/time.html', function(req, res) {
+    res.sendfile(__dirname + '/app/coke50/time.html');
+});
+
+app.get('/recipe.html', function(req, res) {
+    res.sendfile(__dirname + '/app/coke50/recipe.html');
+});
+
 // Pad to follow the processing export format
 function pad(num) {
     var s = "000" + num;

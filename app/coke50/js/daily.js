@@ -13,76 +13,167 @@
 
 var DAT = DAT || {};
 var camera = null;
+var camera_target = null;
+var ptc = {opacity:1};
+
+var center = null;
 var composer, effectFocus;
 var rotation = null; 
 
 var target = { x: 0, y: 0 };
 var R = 200;
+var zoom_out = false;
 //var distanceTarget = 100000;
 
 var imgDir = '/coke50/image/';
 
+var bc_dict = {
+    "coke": new THREE.Color().setHSL( 0.95, 1.0, 0.5 ),
+    "dietcoke": new THREE.Color().setHSL( 0.75, 1.0, 0.5 ),
+    "sprite": new THREE.Color().setHSL( 0.41, 1.0, 0.5 ),
+    "drpepper": new THREE.Color().setHSL( 0.91, 1.0, 0.5 ),
+    "fanta": new THREE.Color().setHSL( 0.083, 1.0, 0.5 )
+  }
+
 //set camera zoom in trajectory
 var trajectory = [
-  {dist : 390,
-    targ: {x: 3.2484077502602235, y: 0.5993469676865384}},
+  {dist : 385,
+    targ: {x: 3.237756980030839, y: 0.5955732709320553}},
 
-  {dist : 220,
-    targ: {x: 3.2713414803550953, y: 0.5799547862833997}},
+  {dist : 202,
+    targ: {x: 3.2393961763606662, y: 0.5938913293721974}},
 
- {dist : 440,
+  {dist : 440,
     targ: {x: 4.191986204907064, y: 0.4085451142172577}},
+
+  {dist : 380,
+    //targ: {x: 3.4179666184175876, y: 0.622148411504521}},
+    targ: {x: 3.947151443628726, y: 0.4518695587474739}},
+
+  {dist : 340,
+    targ: {x: 2.548388980384689, y: 0.6935987755982989}},
+
+  {dist : 400,
+    targ: {x:3.0023889803846893, y:0.7635987755982989}}
 
 ]
 
+//location of the 4 machines
+var m_center = [
+  
+  {lat:40.777715, lng:-73.954374, dist : 274, targ: {x: 3.4220969176815896, y: 0.7113109771166259}},//new york
+
+  {lat:33.837247,lng:-84.368601, dist : 335,targ: {x: 3.239385918403759, y: 0.5907986745148809}},//georgia tech
+
+  {lat:35.080653,lng:-106.619192, dist : 335, targ:  {x: 2.8518628047064984, y: 0.6127090407012672}},//albuque
+  {lat: 33.780171, lng: -84.383646, dist : 385, targ: {x: 3.239385918403759, y: 0.5897886745148809}}//atlanta
+]
+
+stop_tween =  function(){
+    var t = parseInt(globe.time * tween_length); // get current globe time;
+    cam_tweens[t+1].stop();
+}
 //{x: 2.255880835756043, y: 0.5066305977916148}
 //442
 // Press keyboard "a" to start camera zoom in onto earth
-zoom_to_top10 = function(duration){
 
-  var p1 = duration/Math.abs(trajectory[0].dist - distanceTarget) * 5
-  camera_move(trajectory[0].targ,trajectory[0].dist,-5,p1);
+lat_to_coor = function(lat, lng, r){
+
+    var phi = (90 - lat) * Math.PI / 180;
+    var theta = (180 - lng) * Math.PI / 180;
+
+    var x = r * Math.sin(phi) * Math.cos(theta);
+    var y = r * Math.cos(phi);
+    var z = r * Math.sin(phi) * Math.sin(theta);
+
+    return new THREE.Vector3( x, y, z );
+}
+zoom_to_top10 = function(duration,m){
+  var zoom_dict = ['ny', 'gt', 'al', 'at'];
 
   stop_tween();
-
-  //console.log(cam_tweens);
-  //event.preventDefault();
-  var tween = new TWEEN.Tween(globe.points.material).to({opacity: 0.3},duration/2).easing(TWEEN.Easing.Cubic.EaseOut).start();
   
-  setTimeout(function(){
-    var p2 = duration/Math.abs(trajectory[1].dist - distanceTarget) * 5
-    camera_move(trajectory[1].targ,trajectory[1].dist,-5,p2);
-    var tween = new TWEEN.Tween(globe.points.material).to({opacity: 0},duration*2).easing(TWEEN.Easing.Cubic.EaseOut).start();
-    var tween = new TWEEN.Tween(globe.points_top.material).to({opacity: 0},duration*2).easing(TWEEN.Easing.Cubic.EaseOut).start();
-    
-  }, duration+500);
+  //c_dist.dist = 400;
+  var n_center = lat_to_coor(m_center[m].lat,m_center[m].lng,150);
+  var tween_0 = new TWEEN.Tween(camera_target).to({x: n_center.x,y: n_center.y, z : n_center.z},duration).start();
+  //particle to 0.4
+  var tween_p_0 = new TWEEN.Tween(this.particleSystem.material).to({opacity: 0.4},duration/2);
+  //var p1 = duration/Math.abs(m_center[m].dist - distanceTarget) * 2
 
-  // world_3.jpg width is 6144 pixels, too wide for macbook pro
-  //var image = THREE.ImageUtils.loadTexture(imgDir+'world_3.jpg');
+  if (zoom_out == true) {
+    //particle to 1
+    var tween_p_s = new TWEEN.Tween(this.particleSystem_select.material).to({opacity: 0},duration/2).start();
+     var tween_p_1 = new TWEEN.Tween(this.particleSystem.material).to({opacity: 1},duration/2).start();
+     tween_p_1.chain(tween_p_0);
+     
 
-  // Use 4096 pixel instead
- //var image = THREE.ImageUtils.loadTexture(imgDir+'world_3_4096.jpg');
+  }  else {
+     tween_p_0.start(); 
+  }
 
-/*
-  setTimeout(function(){
+  var tween_dist_0 = new TWEEN.Tween(globe).to({ distanceTarget : m_center[m].dist},duration).start();
+  var tween_target_0 = new TWEEN.Tween(target).to({ x : m_center[m].targ.x, y : m_center[m].targ.y},duration).start();
 
-      mesh_globe.material.uniforms.texture.value = image;
-  },duration + 1500);  
-  */
+  //move camera target to new center
+  
+  globe.create_particle(four_ids[zoom_dict[m]]);
+  
+  var tween_1 = new TWEEN.Tween(globe.points.material).to({opacity: 0.4},duration/2).easing(TWEEN.Easing.Cubic.EaseOut).start();
+  var tween_2 = new TWEEN.Tween(globe.points.material).to({opacity: 0.1},duration).easing(TWEEN.Easing.Cubic.EaseOut);
+  var tween_3 = new TWEEN.Tween(globe.points_top.material).to({opacity: 0},duration).easing(TWEEN.Easing.Cubic.EaseOut);
+  
+  tween_1.chain(tween_2);
+  tween_2.chain(tween_3);
+
+
+
+    //var p2 = duration/Math.abs(202 - distanceTarget) * 2
+    //camera_move(m_center[m].targ,202,-2,p2);
+  var tween_dist_1 = new TWEEN.Tween(globe).to({ distanceTarget : 202},duration);
+
+  var tween_p_2 = new TWEEN.Tween(this.particleSystem.material).to({opacity: 0},duration);
+
+  tween_dist_0.chain(tween_dist_1);
+  tween_p_0.chain(tween_p_2);
+  zoom_out = true;  
+
+
 }
-stop_tween =  function(){
-    var t = parseInt(globe.time * test); // get current globe time;
-    cam_tweens[t*2+1].stop();
+
+zoom_out_top10 = function(duration,m){
+  //var n_center = lat_to_coor(m_center[m].lat,m_center[m].lng,150);
+  var tween_0 = new TWEEN.Tween(camera_target).to({x: center.x,y: center.y, z : center.z},duration).start();
+  var tween_p = new TWEEN.Tween(globe.particlematerial).to({opacity: 0.4},duration).start();
+
+  var p1 = duration/Math.abs(m_center[m].dist - distanceTarget) * 2
+  camera_move(m_center[m].targ,m_center[m].dist,2,p1);
+
+
 }
+
 
 zoom_to_water = function(duration){
 
-  var p1 = duration/Math.abs(trajectory[2].dist - distanceTarget) * 5
-  camera_move(trajectory[2].targ,trajectory[2].dist,-5,p1);
+  //stop_tween();
+ 
+  var p1 = duration/Math.abs(trajectory[3].dist - distanceTarget) * 1
+  camera_move(trajectory[3].targ,trajectory[3].dist,-1,p1);
+  stop_tween();
 
+  setTimeout(function(){
+
+    var p2 = duration/Math.abs(trajectory[4].dist - distanceTarget) * 2
+    camera_move(trajectory[4].targ,trajectory[4].dist,-2,p2);
+  }, duration*4); 
+
+  setTimeout(function(){
+
+    var p3 = duration/Math.abs(trajectory[5].dist - distanceTarget) * 3
+    camera_move(trajectory[5].targ,trajectory[5].dist,3,p3);
+  }, duration*8); 
   //remove camera tween:
 
-  stop_tween();
+  
   /*
   console.log(cam_tweens);
 
@@ -97,17 +188,23 @@ zoom_to_water = function(duration){
   }, duration+500);
 */
 }
+/*
 
+c_dist.__defineSetter__('dist', function(d) {
+  console.log(d);
+  distanceTarget = d;
+});*/   
 
 DAT.Globe = function(container, colorFn) {
 
-  distanceTarget = 500;
-  c_close = 450; c_far = 550;
+  this.distanceTarget = 500;
+  c_close = 400; c_far = 480;
 
+  center = lat_to_coor(33.34,-97.1927,150);
+  camera_target = center;
 
   colorFn = function(x) {
     var c = new THREE.Color();
-    //c.setHSL( ( 0.0 + ( x * 20 ) ), 1.0, 0.5 );
     c.setHSL( x, 1.0, 0.5 );
     return c;
   };
@@ -331,9 +428,26 @@ DAT.Globe = function(container, colorFn) {
     for (i = 0; i < data.length; i++) {
       lat = parseFloat(data[i].lat);
       lng = parseFloat(data[i].lng);
-      color = colorFnWrapper(parseFloat(data[i].total));
-      size = parseFloat(data[i].total);
-      size = size/5000;
+
+      if (opts.type == 'brand') {
+        color = bc_dict[opts.name];
+        size = parseFloat(data[i][opts.name]);
+        size = size/4000;
+      } else if (opts.type == 'top_brand') {
+        color = bc_dict[data[i].topbrand];
+        size = parseFloat(data[i].total);
+        size = size/1000;
+      } else {
+        color = colorFnWrapper(parseFloat(data[i].total));
+        size = parseFloat(data[i].total);
+        
+        if (opts.name=="day90" || opts.name=="day91") size = size/10000;//easter
+        else  size = size/5000; 
+           
+      } 
+
+      //onsole.log(lat + lng + color + size);
+
       
       addPoint(lat, lng, size, color, subgeo, topgeo);
       //addPoint(lat, lng, size, color, opts.name,subgeo);
@@ -352,9 +466,6 @@ DAT.Globe = function(container, colorFn) {
       this._baseGeometry = subgeo;
       this._topGeometry = topgeo;
     }
-
-
-
   };
 
   function createPoints() {
@@ -398,8 +509,125 @@ DAT.Globe = function(container, colorFn) {
       scene.add(this.points_top);
     }
   }
+
+
+
+  function create_particle(opt){
+    var t = globe.time;
+    var current_day = Math.floor(t*tween_length/2+1/2);
+    var consumption_all = all_day[current_day];
+    var consumption_top = [];
+    var total = 500;
+
+    this.particles = []; 
+    this.particlematerial = new THREE.ParticleSystemMaterial( { size: 0.2, transparent: true,vertexColors: true,opacity:ptc.opacity } )
+    
+    if (opt!=null){
+       var ids = [opt];
+       this.particlematerial_select = new THREE.ParticleSystemMaterial( { size: 0.2, transparent: true,vertexColors: true,opacity:ptc.opacity } )
+    } else {
+       var ids = top_ids.slice(0);
+    }   
+    /***
+        Use buffergeometry
+    ***/
+    
+    var num = total*ids.length;
+    var buffer_geometry = new THREE.BufferGeometry();
+
+    buffer_geometry.addAttribute( 'position', Float32Array, num, 3 );
+    buffer_geometry.addAttribute( 'color', Float32Array, num, 3 );
+
+    var positions = buffer_geometry.attributes.position.array;
+    var colors = buffer_geometry.attributes.color.array;
+
+   // top_ids.forEach(function(d){
+    
+    for (var i = 0; i<ids.length; i++){  
+        
+        var machine_c = consumption_all[top_dict[ids[i]]];
+        //console.log(top_dict[ids[i]]);
+        addParticle(machine_c,i,positions,colors,total);
+        
+
+    }
+    //console.log(positions);
+    //console.log(colors);
+    buffer_geometry.computeBoundingSphere();
+    if (opt!=null){
+      particleSystem_select = new THREE.ParticleSystem( buffer_geometry, this.particlematerial_select );
+      scene.add( particleSystem_select );
+    } else {
+      particleSystem = new THREE.ParticleSystem( buffer_geometry, this.particlematerial );
+      scene.add( particleSystem );
+    }  
+    
+
+    }
+
+    /***********************/
+    
+    /*
+    if (opt!=null){
+      
+        var machine_c = consumption_all[top_dict[opt]];
+        addParticle(machine_c,groupGeo);
+      
+
+    } else {
+      top_ids.forEach(function(d){
+      
+        var machine_c = consumption_all[top_dict[d]];
+        addParticle(machine_c,groupGeo);
+
+      })
+
+    }*/
+
+
+
+  addParticle = function(data,i,pos,col,total){
+    var total = total;
+    var lat, lng, size, color, step, colorFnWrapper;
+    colorFnWrapper = function(total) { return colorFn(c_scale(total)); };
+    var size = parseFloat(data.total)/5000;
+    lat = parseFloat(data.lat);
+    lng = parseFloat(data.lng);
+
+    var color = colorFnWrapper(parseFloat(data.total));
+
+    //var geometry_p = new THREE.Geometry();
+
+    for( var j = 0; j < total; j++ ){
+      
+      var count = i * total + j * 3;
+      var r = size * Math.random() + R;
+      var delta = 0.2 / (2 * Math.PI * r)*360;
+
+      var lat_t = lat + delta * (Math.random() - 0.5);
+      var lng_t = lng + delta * (Math.random() - 0.5);
+
+
+      //geometry_p.vertices[i] = lat_to_coor(lat_t,lng_t,r);
+      var vt = lat_to_coor(lat_t,lng_t,r);
+      pos[count] = vt.x;
+      pos[count+1] = vt.y;
+      pos[count+2] = vt.z;
+
+      col[count] = color.r;
+      col[count + 1] = color.g;
+      col[count + 2] = color.b;
+      
+      //geometry_p.colors[i] = color;
+    }
+
+    //var particles_p = new THREE.ParticleSystem( geometry_p,  globe.particlematerial);
+    //scene.add(particles_p);
+    //globe.particles.push(particles_p);
+
+  }
   
-  function PointPosition(lat, lng,size,r) {
+  PointPosition=function(lat, lng,size,r,opt) {
     var phi = (90 - lat) * Math.PI / 180;
     var theta = (180 - lng) * Math.PI / 180;
 
@@ -407,16 +635,17 @@ DAT.Globe = function(container, colorFn) {
     point.position.y = r * Math.cos(phi);
     point.position.z = r * Math.sin(phi) * Math.sin(theta);
 
-    point_top.position.x = (r + size + 1.5) * Math.sin(phi) * Math.cos(theta);
-    point_top.position.y = (r + size + 1.5) * Math.cos(phi);
-    point_top.position.z = (r + size + 1.5) * Math.sin(phi) * Math.sin(theta);
-
+    if (opt.top == true) {
+      point_top.position.x = (r + size + 1.5) * Math.sin(phi) * Math.cos(theta);
+      point_top.position.y = (r + size + 1.5) * Math.cos(phi);
+      point_top.position.z = (r + size + 1.5) * Math.sin(phi) * Math.sin(theta);
+    }  
   }
 
 
   function addPoint(lat, lng, size, color, subgeo, topgeo) {
 
-    PointPosition(lat,lng,size,R);
+    PointPosition(lat,lng,size,R,{top:true});
 
     point.lookAt(mesh.position);
     point_top.lookAt(mesh.position);
@@ -504,9 +733,9 @@ DAT.Globe = function(container, colorFn) {
   }
 
   function zoom(delta) {
-    distanceTarget -= delta;
-    distanceTarget = distanceTarget > 1000 ? 1000 : distanceTarget;
-    distanceTarget = distanceTarget < 210 ? 210 : distanceTarget;
+    globe.distanceTarget -= delta;
+    globe.distanceTarget = globe.distanceTarget > 1000 ? 1000 : globe.distanceTarget;
+    globe.distanceTarget = globe.distanceTarget < 202 ? 202 : globe.distanceTarget;
   }
 
   function animate() {
@@ -519,39 +748,81 @@ DAT.Globe = function(container, colorFn) {
 
     rotation.x += (target.x - rotation.x) * 0.1;
     rotation.y += (target.y - rotation.y) * 0.1;
-    distance += (distanceTarget - distance) * 0.3;
+    distance += (globe.distanceTarget - distance) * 0.3;
 
     camera.position.x = distance * Math.sin(rotation.x) * Math.cos(rotation.y);
     camera.position.y = distance * Math.sin(rotation.y);
     camera.position.z = distance * Math.cos(rotation.x) * Math.cos(rotation.y);
 
-    //33.65   84.42  Atlanta,GA
-    var c = {lat:33.34, lng: -97.1927};
-
-    var phi_c = (90 - c.lat) * Math.PI / 180;
-    var theta_c = (180 - c.lng) * Math.PI / 180;
-
-    point.position.x = 150 * Math.sin(phi_c) * Math.cos(theta_c);
-    point.position.y = 150 * Math.cos(phi_c);
-    point.position.z = 150 * Math.sin(phi_c) * Math.sin(theta_c);
-    //center of us lat: 39.8282 lng:98.5795
-
-    camera.lookAt(point.position);
-    //composer.render( 0.01 );
+    camera.lookAt(camera_target);
     renderer.clear();
     renderer.render(scene, camera);
-
-    
-    //composer.render(0.01);
   }
 
   init();
+
+$.when( $.getJSON("coke50/data/states.geojson.json") ).then(function(data){
+        add_states(data);
+    });
+
+
+    add_states = function(data) {
+        console.log(data);
+
+        this.geo = new geoConfig();*/
+        var states = [];
+        var i, j;
+
+        this.line_material = new THREE.LineBasicMaterial({
+              color: 0xfadd3f,
+              transparent: true
+        });
+
+        // convert to threejs meshes
+        for (i = 0 ; i < data.features.length ; i++) {//for each state
+            var state =  data.features[i].properties.NAME;
+            var geoFeature = data.features[i].geometry.coordinates;//coordinates are array of lines
+             for (j = 0 ; j < geoFeature.length ; j++) {// for each line
+
+              if(geoFeature[j].length == 1) {
+                geoFeature[j].forEach(function(d){
+                  var geometry = new THREE.Geometry();
+                  d.forEach(function(p){
+                    var ver_temp = lat_to_coor (p[1], p[0], 200);
+                    geometry.vertices.push(ver_temp);
+
+                  });
+                  var line = new THREE.Line( geometry, line_material );
+                scene.add( line );
+
+                });
+              } else {
+
+                var geometry = new THREE.Geometry();
+                //for each points
+                geoFeature[j].forEach(function(d){
+                  var ver_temp = lat_to_coor (d[1], d[0], 200);
+
+                  geometry.vertices.push(ver_temp);
+
+                });
+
+                var line = new THREE.Line( geometry, line_material );
+                scene.add( line );
+              }  
+
+
+
+        }
+        console.log(state+" added!")
+    }
+    }
+
+
   this.animate = animate;
   this.render = render;
 
-
-
-    this.__defineGetter__('time', function() {
+  this.__defineGetter__('time', function() {
     return this._time || 0;
   });
 
@@ -573,7 +844,8 @@ DAT.Globe = function(container, colorFn) {
    
     var scaledt = t*l+1;
     
-    if(scaledt >= test*2) return;
+    
+    if(scaledt >= tween_length) return;
     var index = Math.floor(scaledt);
    
     for (i = 0; i < l; i++) {
@@ -604,22 +876,23 @@ DAT.Globe = function(container, colorFn) {
           //night         
           if(index%2 == 1) {
             //this.points.geometry.faces[c].color.setHSL(ori_h+color_delta * leftover,1.0,0.5 + color_delta*5);
-            this.points.geometry.faces[c].color.setHSL(ori_h+color_delta * leftover,1.0, 0.5 - leftover * 0.4);
+            this.points.geometry.faces[c].color.setHSL(ori_h+color_delta * leftover,1.0, 0.5 - leftover * 0.3);
             
-            this.points_top.geometry.faces[c].color.setHSL(ori_h+color_delta,1.0,0.5 - leftover * 0.4);
+            this.points_top.geometry.faces[c].color.setHSL(ori_h+color_delta,1.0,0.5 - leftover * 0.3);
           } 
 
           //day
           else {
-            this.points.geometry.faces[c].color.setHSL(ori_h+color_delta * leftover,1.0, 0.1 + leftover * 0.4);
+            this.points.geometry.faces[c].color.setHSL(ori_h+color_delta * leftover,1.0, 0.2 + leftover * 0.3);
             
-            this.points_top.geometry.faces[c].color.setHSL(ori_h+color_delta,1.0, 0.1 + leftover * 0.4);
+            this.points_top.geometry.faces[c].color.setHSL(ori_h+color_delta,1.0, 0.2 + leftover * 0.3);
 
           }  
 
       } 
     }
     this.points.geometry.colorsNeedUpdate = true;
+    this.points_top.geometry.colorsNeedUpdate = true;
 
     /////////////////
     //update slider//
@@ -643,8 +916,9 @@ DAT.Globe = function(container, colorFn) {
   });
 
   this.addData = addData;
-  this.addParticle = addParticle;
+  this.create_particle = create_particle;
   this.createPoints = createPoints;
+
   this.renderer = renderer;
   this.scene = scene;
   this.colorFn = colorFn;

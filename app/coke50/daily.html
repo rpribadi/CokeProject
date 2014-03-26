@@ -64,6 +64,7 @@
   var tween_length = brand_add ? (test+brands.length + 1)*2 : test * 2; // IMPORTAMT!! Here set the number of days to animate (there are 335 days in total, takes 0.2 seconds to load 1 day)
   var frame_speed = 2000;
   var frame_speed_zoom = 12000; // USE 12000 for exporting. IMPORTAMT!! Change the speed of the animation
+
   var start_delay = 3000;
   var sli_width = 1100; //
   var margin = {top: 20, right: 50, bottom: 20, left: 50},
@@ -161,7 +162,7 @@ $(window).ready(function(){
       d3.csv("/coke50/data/topbrand.csv", function(top_brand){
   //d3.csv("/coke50/data/machine_all.csv", function(all_machine_data){
 
-    var top500 = machine_data.slice(0,1000);
+    var top500 = machine_data.slice(0,1500);
    
     top500.forEach(function(d){
       top_ids.push(d.machineId);
